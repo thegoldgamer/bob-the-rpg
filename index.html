@@ -6,8 +6,7 @@
   <title>bob - The RPG — Game</title>
   <style>
     :root {
-      /* Set your game's original pixel dimensions here. */
-      /* Default: 640x480 — change these to match your exported game's canvas size. */
+      /* Default (overridden automatically if canvas is detected) */
       --game-width: 640px;
       --game-height: 480px;
       --page-bg: #0b0b0b;
@@ -23,12 +22,11 @@
       color: #e6eef8;
     }
 
-    /* Center horizontally and keep at the top */
     .page {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center; /* horizontal center */
+      align-items: center;
       padding: 24px;
       box-sizing: border-box;
     }
@@ -36,7 +34,7 @@
     .game-wrapper {
       width: var(--game-width);
       height: var(--game-height);
-      margin-top: 20px; /* keep space from top */
+      margin-top: 20px;
       background: var(--panel-bg);
       box-shadow: 0 8px 30px rgba(2,6,23,0.6);
       border-radius: 6px;
@@ -44,17 +42,14 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
 
-    /* The embedded game (iframe). Keep native pixel dimensions so it is not upscaled. */
     .game-frame {
       width: 100%;
       height: 100%;
       border: 0;
       display: block;
-      /* Try to preserve crisp pixels if the game uses nearest-neighbour scaling */
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
       background: #000;
     }
 
@@ -70,7 +65,6 @@
       color: #9fb8b0;
     }
 
-    /* Page content below the game so you can scroll down later */
     main.article {
       max-width: 860px;
       width: 100%;
@@ -92,9 +86,6 @@
     }
 
     @media (max-width: 720px) {
-      :root {
-        /* On small screens keep the frame from overflowing — it will scroll horizontally if needed. */
-      }
       .page { padding: 16px; }
     }
   </style>
@@ -105,62 +96,122 @@
     <p style="margin:0; color:#9fb8b0">Game preview — drop your exported HTML5 game into the <code>/game</code> folder.</p>
 
     <div class="game-wrapper" id="gameWrapper">
-      <!-- We'll dynamically set the iframe src if a game exists at /game/index.html -->
       <iframe id="gameFrame" class="game-frame" title="bob - The RPG game" src="" aria-label="Game frame"></iframe>
 
       <div id="placeholder" class="placeholder" style="display:none">
         <strong>No game found</strong>
         <div class="hint">Put your exported HTML5 game's files into the <code>/game</code> folder and make sure there's an <code>index.html</code> there.</div>
-        <div class="hint">Default canvas size is controlled by the CSS variables <code>--game-width</code> and <code>--game-height</code> at the top of this file. Change them to match your exported game's original resolution (e.g. 640px x 480px) to avoid upscaling.</div>
+        <div class="hint">Default canvas size is controlled by the CSS variables <code>--game-width</code> and <code>--game-height</code> at the top of this file. The page will attempt to auto-detect the correct size.</div>
       </div>
     </div>
 
     <main class="article">
       <h2>About</h2>
-      <p>This page is a simple wrapper to host a Gamemaker (HTML5) export. It loads <code>/game/index.html</code> in an iframe kept at the game's original dimensions and centered at the top of the page. You can add more content below and it will be scrollable.</p>
+      <p>This page loads <code>/game/index.html</code> in an iframe, auto-detects the exported game's canvas size, and forces pixelated rendering for the canvas so pixel art remains crisp.</p>
 
       <h3>Quick checklist</h3>
       <ul>
         <li>Export your game from GameMaker as HTML5.</li>
-        <li>Copy the entire exported folder contents into the repository's <code>game/</code> folder (so the exported <code>index.html</code> ends up at <code>/game/index.html</code>).</li>
-        <li>If the game's resolution looks wrong, edit <code>--game-width</code> and <code>--game-height</code> variables at the top of <code>index.html</code> to match the game's original canvas size.</li>
+        <li>Copy the exported files into the repository's <code>game/</code> folder (so <code>game/index.html</code> exists).</li>
+        <li>If auto-detection fails, set <code>--game-width</code> and <code>--game-height</code> at the top of this file manually.</li>
       </ul>
-
-      <p>When you're ready to publish, you can enable GitHub Pages for this repository (set source to the main branch) and the game will be available at <code>https://thegoldgamer.github.io/bob-the-rpg/</code>.</p>
     </main>
 
     <footer>Made with ♥ — drop your exported HTML5 into <code>/game</code>.</footer>
   </div>
 
   <script>
-    // Try to detect whether game/index.html exists. If it does, load it in the iframe.
     (function() {
       var frame = document.getElementById('gameFrame');
       var placeholder = document.getElementById('placeholder');
+      var wrapper = document.getElementById('gameWrapper');
       var gameUrl = './game/index.html';
 
-      // Attempt to fetch the file; use GET because some hosts may not honor HEAD.
+      function showPlaceholder() {
+        frame.style.display = 'none';
+        placeholder.style.display = 'block';
+      }
+      function showFrame() {
+        frame.style.display = 'block';
+        placeholder.style.display = 'none';
+      }
+
       fetch(gameUrl, { method: 'GET' })
         .then(function(response) {
           if (response.ok) {
-            // Game exists. Load it into the iframe.
             frame.src = gameUrl;
-            frame.style.display = 'block';
-            placeholder.style.display = 'none';
+            showFrame();
+
+            // When the iframe finishes loading, try to find the canvas and adjust sizing/rendering.
+            frame.addEventListener('load', function() {
+              try {
+                var win = frame.contentWindow;
+                var doc = frame.contentDocument || win.document;
+
+                // Remove default margins inside the iframe to avoid extra spacing
+                try { doc.documentElement.style.background = 'transparent'; } catch(e){}
+                try { doc.body.style.margin = '0'; } catch(e){}
+
+                // Some engines create the canvas after load; poll briefly for it.
+                var tries = 0;
+                var maxTries = 50;
+                var interval = setInterval(function() {
+                  tries++;
+                  var canvas = null;
+                  try {
+                    canvas = doc && (doc.querySelector('canvas') || doc.getElementsByTagName('canvas')[0]);
+                  } catch (e) {
+                    clearInterval(interval);
+                    console.warn('Cannot access iframe content (cross-origin?), leaving default sizing.');
+                    return;
+                  }
+
+                  if (canvas) {
+                    clearInterval(interval);
+
+                    // Get the canvas pixel (logical) size from attributes first, fallback to computed sizes.
+                    var w = canvas.width || parseInt(canvas.getAttribute('width')) || canvas.clientWidth || Math.round(canvas.getBoundingClientRect().width) || 640;
+                    var h = canvas.height || parseInt(canvas.getAttribute('height')) || canvas.clientHeight || Math.round(canvas.getBoundingClientRect().height) || 480;
+
+                    // Update CSS variables and wrapper sizing so browser does not scale the canvas.
+                    document.documentElement.style.setProperty('--game-width', w + 'px');
+                    document.documentElement.style.setProperty('--game-height', h + 'px');
+                    wrapper.style.width = w + 'px';
+                    wrapper.style.height = h + 'px';
+
+                    // Inject CSS into the iframe to force nearest-neighbor / pixelated rendering for canvas
+                    try {
+                      var style = doc.createElement('style');
+                      style.type = 'text/css';
+                      style.appendChild(doc.createTextNode('\nhtml,body{margin:0;background:transparent}\ncanvas{image-rendering: pixelated; image-rendering: crisp-edges; -ms-interpolation-mode: nearest-neighbor;}\n'));
+                      (doc.head || doc.documentElement).appendChild(style);
+                    } catch (e) {}
+
+                    // Also mark the canvas element itself (in case it's inline-styled)
+                    try {
+                      canvas.style.imageRendering = 'pixelated';
+                      canvas.style.setProperty('image-rendering', 'pixelated');
+                    } catch (e) {}
+
+                    // If your game uses CSS scaling internally, it might still blur; prefer the engine's canvas width/height attributes.
+                  } else if (tries >= maxTries) {
+                    clearInterval(interval);
+                    console.warn('No canvas found inside game iframe.');
+                  }
+                }, 100);
+
+              } catch (e) {
+                console.warn('Error while accessing iframe content:', e);
+              }
+            });
+
           } else {
-            // Not found — show helpful placeholder.
-            frame.style.display = 'none';
-            placeholder.style.display = 'block';
+            showPlaceholder();
           }
         })
         .catch(function() {
-          // Network error / file not present
-          frame.style.display = 'none';
-          placeholder.style.display = 'block';
+          showPlaceholder();
         });
-
-      // If you know the game's resolution, you can optionally set the CSS variables here using JS.
-      // Example: document.documentElement.style.setProperty('--game-width','640px');
     })();
   </script>
 </body>
