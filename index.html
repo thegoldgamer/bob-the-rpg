@@ -1,119 +1,167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bob - The RPG — Game</title>
+  <style>
+    :root {
+      /* Set your game's original pixel dimensions here. */
+      /* Default: 640x480 — change these to match your exported game's canvas size. */
+      --game-width: 640px;
+      --game-height: 480px;
+      --page-bg: #0b0b0b;
+      --panel-bg: #0f1720;
+      --accent: #3ddc84;
+    }
 
-    <!-- Custom PreHead code is injected here -->
-    
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: linear-gradient(180deg, var(--page-bg), #071017);
+      color: #e6eef8;
+    }
 
-    <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name ="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta charset="utf-8"/>
+    /* Center horizontally and keep at the top */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* horizontal center */
+      padding: 24px;
+      box-sizing: border-box;
+    }
 
-        <!-- Builtin injector for disabling cache -->
-        <meta http-equiv="pragma" content="no-cache"/>
+    .game-wrapper {
+      width: var(--game-width);
+      height: var(--game-height);
+      margin-top: 20px; /* keep space from top */
+      background: var(--panel-bg);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        <!-- Set the title bar of the page -->
-        <title>bob - The RPG</title>
+    /* The embedded game (iframe). Keep native pixel dimensions so it is not upscaled. */
+    .game-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      /* Try to preserve crisp pixels if the game uses nearest-neighbour scaling */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #000;
+    }
 
-        <!-- Custom PreStyle code is injected here -->
-        
+    .placeholder {
+      padding: 28px;
+      text-align: center;
+      color: #bcd7d1;
+    }
 
-        <!-- Set the background colour of the document -->
-        <style>
-            body {
-                background: #0;
-                color: #cccccc;
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-            }
+    .hint {
+      margin-top: 18px;
+      font-size: 13px;
+      color: #9fb8b0;
+    }
 
-            canvas {
-                image-rendering: optimizeSpeed;
-                -webkit-interpolation-mode: nearest-neighbor;
-                -ms-touch-action: none;
-                touch-action: none;
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-            }
-            :-webkit-full-screen #canvas {
-                width: 100%;
-                height: 100%;
-            }
-            :-webkit-full-screen {
-                width: 100%;
-                height: 100%;
-            }
-            
-            /* Custom Runner Styles */
-            div.gm4html5_div_class {
-                margin: 0px;
-                padding: 0px;
-                border: 0px;
-            }
-            div.gm4html5_login {
-                padding: 20px;
-                position: absolute;
-                border: solid 2px #000000;
-                background-color: #404040;
-                color:#00ff00;
-                border-radius: 15px;
-                box-shadow: #101010 20px 20px 40px;
-            }
-            div.gm4html5_cancel_button {
-                float: right;
-            }
-            div.gm4html5_login_button {
-                float: left;
-            }
-            div.gm4html5_login_header {
-                text-align: center;
-            }
-            /* END - Custom Runner Styles */
-            
-        </style>
+    /* Page content below the game so you can scroll down later */
+    main.article {
+      max-width: 860px;
+      width: 100%;
+      margin-top: 28px;
+      color: #d9eef2;
+      line-height: 1.5;
+    }
 
-        <!-- Custom PostStyle code is injected here -->
-        
+    a.action {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
 
-        <!-- Builtin injector for injecting flurry analytics code -->
-        
-    </head>
+    footer {
+      margin: 48px 0 24px;
+      color: #7ea59b;
+      font-size: 13px;
+    }
 
-    <!-- Custom PostHead code is injected here -->
-    
+    @media (max-width: 720px) {
+      :root {
+        /* On small screens keep the frame from overflowing — it will scroll horizontally if needed. */
+      }
+      .page { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>bob - The RPG</h1>
+    <p style="margin:0; color:#9fb8b0">Game preview — drop your exported HTML5 game into the <code>/game</code> folder.</p>
 
-    <!-- Custom PreBody code is injected here -->
-    
+    <div class="game-wrapper" id="gameWrapper">
+      <!-- We'll dynamically set the iframe src if a game exists at /game/index.html -->
+      <iframe id="gameFrame" class="game-frame" title="bob - The RPG game" src="" aria-label="Game frame"></iframe>
 
-    <body>
-        <div class="gm4html5_div_class" id="gm4html5_div_id">
-            
-            <!-- Builtin injector for splash screen -->
-            
+      <div id="placeholder" class="placeholder" style="display:none">
+        <strong>No game found</strong>
+        <div class="hint">Put your exported HTML5 game's files into the <code>/game</code> folder and make sure there's an <code>index.html</code> there.</div>
+        <div class="hint">Default canvas size is controlled by the CSS variables <code>--game-width</code> and <code>--game-height</code> at the top of this file. Change them to match your exported game's original resolution (e.g. 640px x 480px) to avoid upscaling.</div>
+      </div>
+    </div>
 
-            <!-- Create the canvas element the game draws to -->
-            <canvas id="canvas" width="500" height="400" >
-                <p>Your browser doesn't support HTML5 canvas.</p>
-            </canvas>
-        </div>
+    <main class="article">
+      <h2>About</h2>
+      <p>This page is a simple wrapper to host a Gamemaker (HTML5) export. It loads <code>/game/index.html</code> in an iframe kept at the game's original dimensions and centered at the top of the page. You can add more content below and it will be scrollable.</p>
 
-        <!-- Run the game code -->
-        <script type="text/javascript" src="html5game/bob - The RPG.js?cachebust=539683225"></script>
+      <h3>Quick checklist</h3>
+      <ul>
+        <li>Export your game from GameMaker as HTML5.</li>
+        <li>Copy the entire exported folder contents into the repository's <code>game/</code> folder (so the exported <code>index.html</code> ends up at <code>/game/index.html</code>).</li>
+        <li>If the game's resolution looks wrong, edit <code>--game-width</code> and <code>--game-height</code> variables at the top of <code>index.html</code> to match the game's original canvas size.</li>
+      </ul>
 
-        <!-- Builtin injector for injecting runner path -->
-        
+      <p>When you're ready to publish, you can enable GitHub Pages for this repository (set source to the main branch) and the game will be available at <code>https://thegoldgamer.github.io/bob-the-rpg/</code>.</p>
+    </main>
 
-        <script>window.onload = GameMaker_Init;</script>
+    <footer>Made with ♥ — drop your exported HTML5 into <code>/game</code>.</footer>
+  </div>
 
-        <!-- Builtin injector for injecting google analytics code -->
-        
+  <script>
+    // Try to detect whether game/index.html exists. If it does, load it in the iframe.
+    (function() {
+      var frame = document.getElementById('gameFrame');
+      var placeholder = document.getElementById('placeholder');
+      var gameUrl = './game/index.html';
 
-    </body>
+      // Attempt to fetch the file; use GET because some hosts may not honor HEAD.
+      fetch(gameUrl, { method: 'GET' })
+        .then(function(response) {
+          if (response.ok) {
+            // Game exists. Load it into the iframe.
+            frame.src = gameUrl;
+            frame.style.display = 'block';
+            placeholder.style.display = 'none';
+          } else {
+            // Not found — show helpful placeholder.
+            frame.style.display = 'none';
+            placeholder.style.display = 'block';
+          }
+        })
+        .catch(function() {
+          // Network error / file not present
+          frame.style.display = 'none';
+          placeholder.style.display = 'block';
+        });
 
-    <!-- Custom PostBody code is injected here -->
-    
+      // If you know the game's resolution, you can optionally set the CSS variables here using JS.
+      // Example: document.documentElement.style.setProperty('--game-width','640px');
+    })();
+  </script>
+</body>
 </html>
