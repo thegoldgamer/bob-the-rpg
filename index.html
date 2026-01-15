@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"> 
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,28 +13,37 @@
       --accent: #3ddc84;
     }
 
+    /* Prevent accidental horizontal overflow while allowing vertical scroll */
     html, body {
       height: 100%;
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      overflow-x: hidden !important; /* hide accidental horizontal overflow */
+      max-width: 100vw;
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
       background: linear-gradient(180deg, var(--page-bg), #071017);
       color: #e6eef8;
-      overflow-x: hidden; /* prevent unwanted horizontal scrollbars */
     }
+
+    /* Universal box-sizing */
+    *, *::before, *::after { box-sizing: inherit; }
 
     .page {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center; /* horizontal center */
-      padding: 24px 12px 48px; /* keep some top/bottom padding but reduce left/right so wide games don't overflow */
+      align-items: center;
+      padding: 24px 12px 48px;
       box-sizing: border-box;
+      max-width: 100vw;
     }
 
     .game-wrapper {
+      /* width/height will be set by JS to exact pixel values, but enforce safe caps */
       width: var(--game-width);
       height: var(--game-height);
-      margin: 20px auto 0; /* center horizontally and keep near top */
+      margin: 20px auto 0;
       background: var(--panel-bg);
       box-shadow: 0 8px 30px rgba(2,6,23,0.6);
       border-radius: 6px;
@@ -44,6 +53,8 @@
       justify-content: center;
       position: relative;
       flex: 0 0 auto;
+      box-sizing: border-box;
+      max-width: calc(100vw - 24px) !important; /* never exceed viewport minus small padding */
     }
 
     .game-frame {
@@ -110,10 +121,8 @@
     }
 
     @media (max-width: 920px) {
-      /* on small viewports reduce page padding */
       .page { padding-left: 12px; padding-right: 12px; }
     }
-
   </style>
 </head>
 <body>
@@ -147,7 +156,6 @@
 
   <div id="mobileOverlay" class="mobile-overlay">
     <div class="mobile-card">
-      <!-- simple PC icon -->
       <svg class="pc-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="14" rx="2" stroke="#e6eef8" stroke-width="1.2" fill="rgba(255,255,255,0.02)"/><rect x="7" y="18" width="10" height="1.6" rx="0.5" fill="#e6eef8"/><rect x="11" y="20" width="2" height="0.8" rx="0.2" fill="#e6eef8"/></svg>
       <h3 style="margin:8px 0 6px">This game is for PC</h3>
       <p style="margin:0; color:#cfe6db">Please open this page on a desktop or laptop. The controls require keyboard and/or mouse and the page is not tuned for touch devices.</p>
@@ -162,18 +170,11 @@
       var overlay = document.getElementById('mobileOverlay');
       var gameUrl = './game/index.html';
 
-      function showPlaceholder() {
-        frame.style.display = 'none';
-        placeholder.style.display = 'block';
-      }
-      function showFrame() {
-        frame.style.display = 'block';
-        placeholder.style.display = 'none';
-      }
+      function showPlaceholder() { frame.style.display = 'none'; placeholder.style.display = 'block'; }
+      function showFrame() { frame.style.display = 'block'; placeholder.style.display = 'none'; }
 
       function shouldShowMobileOverlay() {
         try {
-          // show overlay on touch-first devices or narrow viewports
           if (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) return true;
           if (/Mobi|Android|iPhone|iPad|Tablet/i.test(navigator.userAgent)) return true;
           if (window.innerWidth < 900) return true;
@@ -184,7 +185,6 @@
       function updateOverlayVisibility() {
         if (shouldShowMobileOverlay()) {
           overlay.style.display = 'flex';
-          // hide the game area beneath to prevent layout shifts/scrollbars
           wrapper.style.display = 'none';
         } else {
           overlay.style.display = 'none';
@@ -192,100 +192,104 @@
         }
       }
 
-      // run on load and resize
       updateOverlayVisibility();
       window.addEventListener('resize', function() { setTimeout(updateOverlayVisibility, 60); });
 
       // load game/index.html if present
       fetch(gameUrl, { method: 'GET' })
         .then(function(response) {
-          if (response.ok) {
-            frame.src = gameUrl;
-            showFrame();
+          if (!response.ok) { showPlaceholder(); return; }
+          frame.src = gameUrl;
+          showFrame();
 
-            frame.addEventListener('load', function() {
-              try {
-                var win = frame.contentWindow;
-                var doc = frame.contentDocument || win.document;
+          frame.addEventListener('load', function() {
+            try {
+              var win = frame.contentWindow;
+              var doc = frame.contentDocument || win.document;
 
-                // make the iframe content background transparent and remove body margins
-                try { if (doc && doc.documentElement) doc.documentElement.style.background = 'transparent'; } catch (e){}
-                try { if (doc && doc.body) doc.body.style.margin = '0'; } catch(e){}
+              try { if (doc && doc.documentElement) doc.documentElement.style.background = 'transparent'; } catch (e){}
+              try { if (doc && doc.body) doc.body.style.margin = '0'; } catch(e){}
 
-                // helper to apply detected canvas size and pixel styles
-                function applyCanvas(canvas) {
-                  if (!canvas) return;
+              function measureCanvasCSSSize(canvas) {
+                try {
+                  var rect = canvas.getBoundingClientRect();
+                  var cssW = Math.round(rect.width);
+                  var cssH = Math.round(rect.height);
+                  if (!cssW || !cssH) { cssW = canvas.clientWidth || canvas.width || 640; cssH = canvas.clientHeight || canvas.height || 480; }
+                  return { cssW: cssW, cssH: cssH };
+                } catch (e) { return null; }
+              }
 
-                  // determine logical pixel size (prefer width/height attributes)
-                  var w = canvas.width || parseInt(canvas.getAttribute('width')) || Math.round(canvas.getBoundingClientRect().width) || 640;
-                  var h = canvas.height || parseInt(canvas.getAttribute('height')) || Math.round(canvas.getBoundingClientRect().height) || 480;
+              function applyCanvas(canvas) {
+                if (!canvas) return;
+                var sizes = measureCanvasCSSSize(canvas);
+                if (!sizes) { console.warn('Could not measure canvas CSS size (cross-origin?)'); return; }
+                var cssW = sizes.cssW, cssH = sizes.cssH;
 
-                  // Update wrapper and CSS variables to exact pixel size to avoid browser scaling
-                  document.documentElement.style.setProperty('--game-width', w + 'px');
-                  document.documentElement.style.setProperty('--game-height', h + 'px');
-                  wrapper.style.width = w + 'px';
-                  wrapper.style.height = h + 'px';
-                  wrapper.style.margin = '20px auto 0';
-
-                  // inject pixelated rendering CSS into iframe
-                  try {
-                    var style = doc.createElement('style');
-                    style.type = 'text/css';
-                    style.appendChild(doc.createTextNode('\nhtml,body{margin:0;background:transparent}\ncanvas{image-rendering: pixelated; image-rendering: crisp-edges; -ms-interpolation-mode: nearest-neighbor;}\n'));
-                    (doc.head || doc.documentElement).appendChild(style);
-                  } catch (e) {}
-
-                  // apply directly to canvas element too
-                  try { canvas.style.imageRendering = 'pixelated'; canvas.style.setProperty('image-rendering','pixelated'); } catch (e) {}
-
-                  // observe runtime size changes and reapply
-                  try {
-                    if (window.ResizeObserver) {
-                      var ro = new ResizeObserver(function() {
-                        // small debounce
-                        setTimeout(function() {
-                          var nw = canvas.width || parseInt(canvas.getAttribute('width')) || Math.round(canvas.getBoundingClientRect().width) || w;
-                          var nh = canvas.height || parseInt(canvas.getAttribute('height')) || Math.round(canvas.getBoundingClientRect().height) || h;
-                          if (nw !== w || nh !== h) {
-                            w = nw; h = nh;
-                            document.documentElement.style.setProperty('--game-width', w + 'px');
-                            document.documentElement.style.setProperty('--game-height', h + 'px');
-                            wrapper.style.width = w + 'px';
-                            wrapper.style.height = h + 'px';
-                          }
-                        }, 40);
-                      });
-                      ro.observe(canvas);
-                    }
-                  } catch(e) {}
+                var maxAvailableW = Math.max(80, Math.floor(window.innerWidth - 24)); // leave 24px padding
+                if (cssW > maxAvailableW) {
+                  var nativeW = canvas.width || cssW;
+                  var scale = Math.floor(maxAvailableW / nativeW) || 1;
+                  if (scale < 1) scale = maxAvailableW / cssW;
+                  cssW = Math.round(nativeW * scale);
+                  var nativeH = canvas.height || cssH;
+                  cssH = Math.round(nativeH * scale);
                 }
 
-                // poll briefly for the canvas to be created by the exported game
-                var tries = 0; var maxTries = 80;
-                var poll = setInterval(function() {
-                  tries++;
-                  var canvas = null;
-                  try { canvas = doc && (doc.querySelector('canvas') || doc.getElementsByTagName('canvas')[0]); } catch (e) { clearInterval(poll); console.warn('Cross-origin or blocked access to iframe; cannot auto-size.'); return; }
-                  if (canvas) {
-                    clearInterval(poll);
-                    applyCanvas(canvas);
-                  } else if (tries >= maxTries) {
-                    clearInterval(poll);
-                    console.warn('No canvas detected inside game iframe after polling.');
+                // Apply exact pixel sizes
+                document.documentElement.style.setProperty('--game-width', cssW + 'px');
+                document.documentElement.style.setProperty('--game-height', cssH + 'px');
+                wrapper.style.width = cssW + 'px';
+                wrapper.style.height = cssH + 'px';
+                wrapper.style.margin = '20px auto 0';
+                wrapper.style.maxWidth = 'calc(100vw - 24px)';
+
+                // inject pixelated CSS into iframe
+                try {
+                  var style = doc.createElement('style');
+                  style.type = 'text/css';
+                  style.appendChild(doc.createTextNode('\nhtml,body{margin:0;background:transparent}\ncanvas{image-rendering: pixelated; image-rendering: crisp-edges; -ms-interpolation-mode: nearest-neighbor;}\n'));
+                  (doc.head || doc.documentElement).appendChild(style);
+                } catch (e) {}
+
+                try { canvas.style.imageRendering = 'pixelated'; canvas.style.setProperty('image-rendering', 'pixelated'); } catch(e){}
+                try { canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'; } catch(e){}
+
+                // Observe runtime changes
+                try {
+                  if (win.ResizeObserver) {
+                    var ro = new win.ResizeObserver(function() {
+                      setTimeout(function() {
+                        var newSizes = measureCanvasCSSSize(canvas);
+                        if (newSizes && (newSizes.cssW !== cssW || newSizes.cssH !== cssH)) {
+                          cssW = newSizes.cssW; cssH = newSizes.cssH;
+                          document.documentElement.style.setProperty('--game-width', cssW + 'px');
+                          document.documentElement.style.setProperty('--game-height', cssH + 'px');
+                          wrapper.style.width = cssW + 'px';
+                          wrapper.style.height = cssH + 'px';
+                          try { canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'; } catch(e){}
+                        }
+                      }, 40);
+                    });
+                    ro.observe(canvas);
                   }
-                }, 80);
-
-              } catch (e) {
-                console.warn('Error accessing iframe content:', e);
+                } catch(e){}
               }
-            });
 
-          } else {
-            showPlaceholder();
-          }
-        })
-        .catch(function() { showPlaceholder(); });
+              // Poll for canvas
+              var tries = 0, maxTries = 90;
+              var poll = setInterval(function() {
+                tries++;
+                var canvas = null;
+                try { canvas = doc && (doc.querySelector('canvas') || doc.getElementsByTagName('canvas')[0]); } catch (e) { clearInterval(poll); console.warn('Cross-origin or blocked access to iframe; cannot auto-size.'); return; }
+                if (canvas) { clearInterval(poll); applyCanvas(canvas); }
+                else if (tries >= maxTries) { clearInterval(poll); console.warn('No canvas detected inside game iframe after polling.'); }
+              }, 80);
 
+            } catch (e) { console.warn('Error while accessing iframe content:', e); }
+          });
+
+        }).catch(function() { showPlaceholder(); });
     })();
   </script>
 </body>
