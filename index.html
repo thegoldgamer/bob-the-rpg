@@ -218,10 +218,44 @@
 }
 
 // Always show game
-updateOverlayVisibility();
+// Always show game wrapper
+overlay.style.display = 'none';
+wrapper.style.display = '';
 
+// Load the game iframe
+fetch(gameUrl, { method: 'GET' })
+  .then(function(response) {
+    if (!response.ok) { showPlaceholder(); return; }
 
-      /* rest of script unchanged */
+    // Set iframe attributes
+    frame.setAttribute('allowfullscreen', '');
+    frame.setAttribute('scrolling', 'no');
+    frame.setAttribute('allow', 'fullscreen; autoplay; fullscreen *; geolocation; microphone; camera; clipboard-write; encrypted-media; display-capture');
+
+    // Actually load the game
+    frame.src = gameUrl;
+    showFrame();
+
+    // Canvas resizing logic (optional)
+    frame.addEventListener('load', function() {
+      try {
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument || win.document;
+
+        var canvas = doc.querySelector('canvas') || doc.getElementsByTagName('canvas')[0];
+        if (canvas) {
+          applyCanvas(canvas); // restore your original canvas resizing logic
+        }
+
+      } catch (e) {
+        console.warn('Error while accessing iframe content:', e);
+      }
+    });
+
+  }).catch(function() {
+    showPlaceholder();
+  });
+
     })();
   </script>
 </body>
