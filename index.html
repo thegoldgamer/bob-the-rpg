@@ -1,173 +1,223 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>bob - The RPG — Game</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bob - The RPG — Game</title>
+  <style>
+    :root {
+      --game-width: 1366px;
+      --game-height: 768px;
+      --page-bg: #0b0b0b;
+      --panel-bg: #0f1720;
+      --accent: #3ddc84;
+    }
 
-<style>
-:root {
-  --game-width: 1366px;
-  --game-height: 768px;
-  --page-bg: #0b0b0b;
-  --panel-bg: #0f1720;
-  --accent: #3ddc84;
-}
+    /* --- overflow / centering hardening --- */
+    html, body { overflow-x: hidden !important; overflow-y: scroll; }
+    * { max-width: 100vw; box-sizing: border-box; }
+    .page { width: 100%; max-width: 100vw; padding-left: 12px; padding-right: 12px; box-sizing: border-box; margin: 0 auto; }
+    /* --- end hardening --- */
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-  background: linear-gradient(180deg, var(--page-bg), #071017);
-  color: #e6eef8;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      overflow-x: hidden !important;
+      max-width: 100vw;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: linear-gradient(180deg, var(--page-bg), #071017);
+      color: #e6eef8;
+    }
 
-.page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 12px 48px;
-}
+    *, *::before, *::after { box-sizing: inherit; }
 
-.game-wrapper {
-  width: var(--game-width);
-  height: var(--game-height);
-  margin: 20px auto 0;
-  background: var(--panel-bg);
-  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
-  border-radius: 6px;
-  overflow: hidden;
-  position: relative;
-  max-width: calc(100vw - 24px);
-}
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 12px 48px;
+      box-sizing: border-box;
+      max-width: 100vw;
+    }
 
-.game-frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  background: #000;
-}
+    .game-wrapper {
+      width: var(--game-width);
+      height: var(--game-height);
+      margin: 20px auto 0;
+      background: var(--panel-bg);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      max-width: calc(100vw - 24px) !important;
+      transition: background 240ms ease, box-shadow 240ms ease, border-radius 200ms ease;
+    }
 
-.fs-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 50;
-  background: rgba(0,0,0,0.6);
-  color: #e6eef8;
-  border: 1px solid rgba(255,255,255,0.06);
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-}
+    .fs-backdrop {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      background: #000;
+      transform: scale(1.03);
+      opacity: 0.98;
+    }
 
-.mobile-overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(2,6,23,0.96);
-  z-index: 9999;
-  padding: 28px;
-  text-align: center;
-}
+    .game-wrapper:fullscreen .fs-backdrop,
+    .game-wrapper:-webkit-full-screen .fs-backdrop,
+    .game-wrapper:-moz-full-screen .fs-backdrop,
+    .game-wrapper:-ms-fullscreen .fs-backdrop {
+      display: block;
+    }
 
-.mobile-card {
-  max-width: 420px;
-  background: rgba(255,255,255,0.03);
-  padding: 22px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.04);
-}
-</style>
+    .game-wrapper:fullscreen,
+    .game-wrapper:-webkit-full-screen,
+    .game-wrapper:-moz-full-screen,
+    .game-wrapper:-ms-fullscreen {
+      background: #000;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .fs-button {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      z-index: 50;
+      background: rgba(0,0,0,0.6);
+      color: #e6eef8;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .game-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #000;
+      z-index: 20;
+      position: relative;
+    }
+
+    .mobile-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,23,0.96);
+      z-index: 9999;
+      color: #e6eef8;
+      padding: 28px;
+      text-align: center;
+    }
+
+    .mobile-card {
+      max-width: 420px;
+      background: rgba(255,255,255,0.03);
+      padding: 22px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+  </style>
 </head>
 
 <body>
-<div class="page">
+  <div class="page">
+    <h1>
+      <img src="spr_logo.png" alt="bob - The RPG Logo" style="max-width: 300px; height: auto;">
+    </h1>
 
-<h1>
-  <img src="spr_logo.png" alt="bob - The RPG Logo" style="max-width:300px">
-</h1>
+    <div class="game-wrapper" id="gameWrapper">
+      <div class="fs-backdrop"></div>
 
-<div class="game-wrapper" id="gameWrapper">
-  <button id="fsButton" class="fs-button">Fullscreen</button>
-  <iframe
-    id="gameFrame"
-    class="game-frame"
-    src="./game/index.html"
-    allow="fullscreen"
-    allowfullscreen
-    scrolling="no">
-  </iframe>
-</div>
+      <button id="fsButton" class="fs-button">Fullscreen</button>
 
-<main style="max-width:860px;margin-top:28px">
-<h2>About</h2>
-<p>This is a bonus chapter of Bob - The RPG, made to help promote the Carthage Humane Society.</p>
-</main>
-
-<footer style="margin:48px 0 24px;font-size:13px">
-copyright bob rpg developers pls dont steal our work
-</footer>
-
-</div>
-
-<div id="mobileOverlay" class="mobile-overlay">
-  <div class="mobile-card">
-    <h3>This game is for PC</h3>
-    <p>Please open this page on a desktop or laptop. Keyboard input is required.</p>
+      <iframe id="gameFrame"
+              class="game-frame"
+              src=""
+              allowfullscreen
+              scrolling="no"></iframe>
+    </div>
   </div>
-</div>
 
-<script>
-(function () {
-  const overlay = document.getElementById('mobileOverlay');
-  const wrapper = document.getElementById('gameWrapper');
-  const fsButton = document.getElementById('fsButton');
+  <div id="mobileOverlay" class="mobile-overlay">
+    <div class="mobile-card">
+      <h3>This game is for PC</h3>
+      <p>Please open this page on a desktop or laptop.</p>
+    </div>
+  </div>
 
-  /* STRICT mobile detection only */
-  function isMobileBrowser() {
-    const ua = navigator.userAgent.toLowerCase();
+  <script>
+    (function() {
+      var frame = document.getElementById('gameFrame');
+      var wrapper = document.getElementById('gameWrapper');
+      var overlay = document.getElementById('mobileOverlay');
+      var fsButton = document.getElementById('fsButton');
+      var gameUrl = './game/index.html';
 
-    const mobileOS =
-      /android|iphone|ipod|blackberry|windows phone|opera mini|iemobile/.test(ua);
+      function shouldShowMobileOverlay() {
+        try {
+          var ua = navigator.userAgent.toLowerCase();
 
-    const iPadOS =
-      /ipad/.test(ua) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          /* STRICT mobile browser detection ONLY */
+          if (/android|iphone|ipod|blackberry|windows phone|opera mini|iemobile/.test(ua)) {
+            return true;
+          }
 
-    return mobileOS && !iPadOS;
-  }
+          /* iPadOS reports as Mac — allow it */
+          if (
+            /ipad/.test(ua) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+          ) {
+            return false;
+          }
+        } catch (e) {}
 
-  function updateOverlay() {
-    if (isMobileBrowser()) {
-      overlay.style.display = 'flex';
-      wrapper.style.display = 'none';
-    } else {
-      overlay.style.display = 'none';
-      wrapper.style.display = '';
-    }
-  }
+        return false;
+      }
 
-  updateOverlay();
+      function updateOverlayVisibility() {
+        if (shouldShowMobileOverlay()) {
+          overlay.style.display = 'flex';
+          wrapper.style.display = 'none';
+        } else {
+          overlay.style.display = 'none';
+          wrapper.style.display = '';
+        }
+      }
 
-  /* Fullscreen */
-  fsButton.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      wrapper.requestFullscreen?.();
-    } else {
-      document.exitFullscreen?.();
-    }
-  });
+      updateOverlayVisibility();
+      window.addEventListener('resize', updateOverlayVisibility);
 
-})();
-</script>
+      frame.src = gameUrl;
+
+      fsButton.addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+          wrapper.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
