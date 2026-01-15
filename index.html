@@ -212,14 +212,27 @@
       function showPlaceholder() { frame.style.display = 'none'; placeholder.style.display = 'block'; }
       function showFrame() { frame.style.display = 'block'; placeholder.style.display = 'none'; }
 
-      function shouldShowMobileOverlay() {
-        try {
-          if (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) return true;
-          if (/Mobi|Android|iPhone|iPad|Tablet/i.test(navigator.userAgent)) return true;
-          if (window.innerWidth < 900) return true;
-        } catch (e) {}
-        return false;
-      }
+     function shouldShowMobileOverlay() {
+  try {
+    var ua = navigator.userAgent.toLowerCase();
+
+    // Only block actual mobile browsers
+    if (/android|iphone|ipod|blackberry|windows phone|opera mini|iemobile/.test(ua)) {
+      return true;
+    }
+
+    // Allow iPadOS & touchscreen laptops
+    if (
+      /ipad/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    ) {
+      return false;
+    }
+  } catch (e) {}
+
+  return false;
+}
+
 
       function updateOverlayVisibility() {
         if (shouldShowMobileOverlay()) { overlay.style.display = 'flex'; wrapper.style.display = 'none'; }
