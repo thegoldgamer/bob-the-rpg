@@ -102,7 +102,7 @@
     <p style="margin:0; color:#9fb8b0">Game preview — drop your exported HTML5 game into the <code>/game</code> folder.</p>
 
     <div class="game-wrapper" id="gameWrapper">
-      <iframe id="gameFrame" class="game-frame" title="bob - The RPG game" src="" aria-label="Game frame"></iframe>
+      <iframe id="gameFrame" class="game-frame" title="bob - The RPG game" src="" aria-label="Game frame" scrolling="no"></iframe>
 
       <div id="placeholder" class="placeholder" style="display:none">
         <strong>No game found</strong>
@@ -161,6 +161,7 @@
       updateOverlayVisibility();
       window.addEventListener('resize', function() { setTimeout(updateOverlayVisibility, 60); });
 
+      // load game/index.html if present
       fetch(gameUrl, { method: 'GET' })
         .then(function(response) {
           if (!response.ok) { showPlaceholder(); return; }
@@ -185,12 +186,15 @@
                 } catch (e) { return null; }
               }
 
+              // ---- updated applyCanvas: sizes iframe to canvas and hides inner overflow ----
               function applyCanvas(canvas) {
                 if (!canvas) return;
                 var sizes = measureCanvasCSSSize(canvas);
                 if (!sizes) { console.warn('Could not measure canvas CSS size (cross-origin?)'); return; }
-                var cssW = sizes.cssW, cssH = sizes.cssH;
+                var cssW = sizes.cssW;
+                var cssH = sizes.cssH;
 
+                // Cap to viewport (keep integer scaling where possible)
                 var maxAvailableW = Math.max(80, Math.floor(window.innerWidth - 24));
                 if (cssW > maxAvailableW) {
                   var nativeW = canvas.width || cssW;
@@ -201,6 +205,7 @@
                   cssH = Math.round(nativeH * scale);
                 }
 
+                // Apply to wrapper and CSS variables (exact pixels)
                 document.documentElement.style.setProperty('--game-width', cssW + 'px');
                 document.documentElement.style.setProperty('--game-height', cssH + 'px');
                 wrapper.style.width = cssW + 'px';
@@ -208,36 +213,51 @@
                 wrapper.style.margin = '20px auto 0';
                 wrapper.style.maxWidth = 'calc(100vw - 24px)';
 
+                // Resize the iframe element to match canvas display size and prevent scrolling
+                try {
+                  frame.style.width = cssW + 'px';
+                  frame.style.height = cssH + 'px';
+                  frame.setAttribute('scrolling', 'no');
+                  frame.style.overflow = 'hidden';
+                } catch (e) {}
+
+                // Best-effort: hide overflow inside the iframe document (same-origin only)
+                try {
+                  if (doc && doc.documentElement) doc.documentElement.style.overflow = 'hidden';
+                  if (doc && doc.body) doc.body.style.overflow = 'hidden';
+                } catch (e) { /* cross-origin — ignore */ }
+
+                // Inject pixelated CSS into the iframe (best effort)
                 try {
                   var style = doc.createElement('style');
                   style.type = 'text/css';
-                  style.appendChild(doc.createTextNode('\nhtml,body{margin:0;background:transparent}\ncanvas{image-rendering: pixelated; image-rendering: crisp-edges; -ms-interpolation-mode: nearest-neighbor;}\n'));
+                  style.appendChild(doc.createTextNode('\nhtml,body{margin:0;background:transparent;overflow:hidden}\ncanvas{image-rendering: pixelated; image-rendering: crisp-edges; -ms-interpolation-mode: nearest-neighbor;}\n'));
                   (doc.head || doc.documentElement).appendChild(style);
                 } catch (e) {}
 
-                try { canvas.style.imageRendering = 'pixelated'; canvas.style.setProperty('image-rendering', 'pixelated'); } catch(e){}
-                try { canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'; } catch(e){}
-
+                // Also make the canvas itself use pixelated rendering and exact CSS pixels
                 try {
-                  if (win.ResizeObserver) {
-                    var ro = new win.ResizeObserver(function() {
-                      setTimeout(function() {
-                        var newSizes = measureCanvasCSSSize(canvas);
-                        if (newSizes && (newSizes.cssW !== cssW || newSizes.cssH !== cssH)) {
-                          cssW = newSizes.cssW; cssH = newSizes.cssH;
-                          document.documentElement.style.setProperty('--game-width', cssW + 'px');
-                          document.documentElement.style.setProperty('--game-height', cssH + 'px');
-                          wrapper.style.width = cssW + 'px';
-                          wrapper.style.height = cssH + 'px';
-                          try { canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px'; } catch(e){}
-                        }
-                      }, 40);
-                    });
-                    ro.observe(canvas);
+                  canvas.style.imageRendering = 'pixelated';
+                  canvas.style.setProperty('image-rendering', 'pixelated');
+                  canvas.style.width = cssW + 'px';
+                  canvas.style.height = cssH + 'px';
+                } catch (e) {}
+
+                // If the iframe content still can produce larger layout, try to detect it and clip it (best-effort)
+                try {
+                  var contentW = (doc && (doc.documentElement.scrollWidth || (doc.body && doc.body.scrollWidth))) || cssW;
+                  var contentH = (doc && (doc.documentElement.scrollHeight || (doc.body && doc.body.scrollHeight))) || cssH;
+                  if (contentW > cssW || contentH > cssH) {
+                    try {
+                      if (doc && doc.documentElement) doc.documentElement.style.overflow = 'hidden';
+                      if (doc && doc.body) doc.body.style.overflow = 'hidden';
+                    } catch(e){}
                   }
                 } catch(e){}
               }
+              // ---- end applyCanvas ----
 
+              // Poll for the canvas element; games may create it after load.
               var tries = 0, maxTries = 90;
               var poll = setInterval(function() {
                 tries++;
@@ -246,6 +266,13 @@
                 if (canvas) { clearInterval(poll); applyCanvas(canvas); }
                 else if (tries >= maxTries) { clearInterval(poll); console.warn('No canvas detected inside game iframe after polling.'); }
               }, 80);
+
+              // Observe runtime resize inside iframe (if available)
+              try {
+                if (win && win.ResizeObserver) {
+                  // After initial applyCanvas, ResizeObserver attached inside applyCanvas handles changes there.
+                }
+              } catch(e){}
 
             } catch (e) { console.warn('Error while accessing iframe content:', e); }
           });
