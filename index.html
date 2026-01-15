@@ -220,41 +220,63 @@
 // Always show game
 // Always show game wrapper
 overlay.style.display = 'none';
-wrapper.style.display = '';
+wrapper.style.display = 'flex';
+wrapper.style.justifyContent = 'center';
+wrapper.style.alignItems = 'center';
+wrapper.style.minHeight = '100vh';
 
 // Load the game iframe
 fetch(gameUrl, { method: 'GET' })
   .then(function(response) {
     if (!response.ok) { showPlaceholder(); return; }
 
-    // Set iframe attributes
     frame.setAttribute('allowfullscreen', '');
     frame.setAttribute('scrolling', 'no');
     frame.setAttribute('allow', 'fullscreen; autoplay; fullscreen *; geolocation; microphone; camera; clipboard-write; encrypted-media; display-capture');
 
-    // Actually load the game
     frame.src = gameUrl;
     showFrame();
 
-    // Canvas resizing logic (optional)
+    // Apply canvas sizing and centering after iframe loads
     frame.addEventListener('load', function() {
       try {
         var win = frame.contentWindow;
         var doc = frame.contentDocument || win.document;
-
         var canvas = doc.querySelector('canvas') || doc.getElementsByTagName('canvas')[0];
-        if (canvas) {
-          applyCanvas(canvas); // restore your original canvas resizing logic
+        if (!canvas) return;
+
+        function applyCanvas() {
+          var gameWidth = canvas.width || 1366;
+          var gameHeight = canvas.height || 768;
+
+          document.documentElement.style.setProperty('--game-width', gameWidth + 'px');
+          document.documentElement.style.setProperty('--game-height', gameHeight + 'px');
+
+          frame.style.width = gameWidth + 'px';
+          frame.style.height = gameHeight + 'px';
+
+          wrapper.style.width = gameWidth + 'px';
+          wrapper.style.height = gameHeight + 'px';
+
+          var scale = Math.min(window.innerWidth / gameWidth, window.innerHeight / gameHeight, 1);
+          frame.style.transform = 'scale(' + scale + ')';
+          frame.style.transformOrigin = 'top left';
+          wrapper.style.width = gameWidth * scale + 'px';
+          wrapper.style.height = gameHeight * scale + 'px';
         }
 
+        applyCanvas();
+        window.addEventListener('resize', applyCanvas);
+
       } catch (e) {
-        console.warn('Error while accessing iframe content:', e);
+        console.warn('Error accessing iframe canvas:', e);
       }
     });
 
   }).catch(function() {
     showPlaceholder();
   });
+
 
     })();
   </script>
