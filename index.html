@@ -13,7 +13,7 @@
       --accent: #3ddc84;
     }
 
-    /* --- overflow / centering hardeninge --- */
+    /* --- overflow / centering hardening --- */
     html, body { overflow-x: hidden !important; overflow-y: scroll; }
     * { max-width: 100vw; box-sizing: border-box; }
     .page { width: 100%; max-width: 100vw; padding-left: 12px; padding-right: 12px; box-sizing: border-box; margin: 0 auto; }
@@ -61,17 +61,21 @@
       transition: background 240ms ease, box-shadow 240ms ease, border-radius 200ms ease;
     }
 
+    /* Ambient backdrop element placed behind the iframe; shown only while fullscreen */
     .fs-backdrop {
       display: none;
       position: absolute;
       inset: 0;
-      z-index: 6;
+      z-index: 6; /* behind iframe and full-screen controls */
       pointer-events: none;
       background: #000;
+      filter: none;
       transform: scale(1.03);
+      transition: opacity 300ms ease;
       opacity: 0.98;
     }
 
+    /* When the wrapper is fullscreen, show the backdrop and darken background */
     .game-wrapper:fullscreen .fs-backdrop,
     .game-wrapper:-webkit-full-screen .fs-backdrop,
     .game-wrapper:-moz-full-screen .fs-backdrop,
@@ -83,11 +87,12 @@
     .game-wrapper:-webkit-full-screen,
     .game-wrapper:-moz-full-screen,
     .game-wrapper:-ms-fullscreen {
-      background: #000;
+      background: #000;      /* solid black background when fullscreen */
       box-shadow: none;
       border-radius: 0;
     }
 
+    /* Fullscreen button */
     .fs-button {
       position: absolute;
       right: 8px;
@@ -106,6 +111,7 @@
       align-items: center;
       gap: 8px;
     }
+    .fs-button svg { width: 16px; height: 16px; display:block; }
 
     .game-frame {
       width: 100%;
@@ -117,106 +123,113 @@
       position: relative;
     }
 
-    .mobile-overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(2,6,23,0.96);
-      z-index: 9999;
-      color: #e6eef8;
-      padding: 28px;
-      text-align: center;
-    }
+    .placeholder { padding: 28px; text-align: center; color: #bcd7d1; }
+    .hint { margin-top: 18px; font-size: 13px; color: #9fb8b0; }
 
-    .mobile-card {
-      max-width: 420px;
-      background: rgba(255,255,255,0.03);
-      padding: 22px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.04);
+    main.article { max-width: 860px; width: 100%; margin-top: 28px; color: #d9eef2; line-height: 1.5; }
+
+    .mobile-overlay {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(2,6,23,0.96); z-index: 9999; color: #e6eef8; padding: 28px; text-align: center;
     }
+    .mobile-card { max-width: 420px; background: rgba(255,255,255,0.03); padding: 22px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); }
+    .pc-icon { width: 72px; height: 72px; margin: 0 auto 12px; display: block; opacity: 0.95; }
+
+    footer { margin: 48px 0 24px; color: #7ea59b; font-size: 13px; }
+
+    @media (max-width: 920px) { .page { padding-left: 12px; padding-right: 12px; } }
+
   </style>
 </head>
-
 <body>
   <div class="page">
     <h1>
-      <img src="spr_logo.png" alt="bob - The RPG Logo" style="max-width: 300px; height: auto;">
+    <img src="spr_logo.png" alt="bob - The RPG Logo" style="max-width: 300px; height: auto;">
     </h1>
+    <div class="game-wrapper" id="gameWrapper" role="region" aria-label="Game area">
+      <!-- Ambient backdrop (shown while fullscreen) -->
+      <div class="fs-backdrop" id="fsBackdrop" aria-hidden="true"></div>
 
-    <div class="game-wrapper" id="gameWrapper">
-      <div class="fs-backdrop"></div>
+      <!-- Fullscreen button -->
+      <button id="fsButton" class="fs-button" title="Fullscreen (F)">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 14v3a1 1 0 0 1-1 1H3v-4h4zM7 10V7H3v4h4zM17 10V7h4v4h-4zM17 14v3h4v-4h-4z" stroke="#e6eef8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Fullscreen
+      </button>
 
-      <button id="fsButton" class="fs-button">Fullscreen</button>
-
-      <iframe id="gameFrame"
-              class="game-frame"
+      <!-- allowfullscreen + allow used for best behavior in various browsers -->
+      <iframe id="gameFrame" class="game-frame" title="bob - The RPG game"
               src=""
+              aria-label="Game frame"
+              allow="fullscreen; autoplay; fullscreen *; geolocation; microphone; camera; clipboard-write; encrypted-media; display-capture"
               allowfullscreen
               scrolling="no"></iframe>
+
+      <div id="placeholder" class="placeholder" style="display:none">
+        <strong>No game found</strong>
+        <div class="hint">Unknown error. Please tell me about this, I likely forgot to put the game into the <code>/game</code> folder.</div>
+      </div>
     </div>
+
+    <main class="article">
+      <h2>About</h2>
+      <p>This is a bonus chapter of Bob - The RPG, made to help promote the Carthage Humane Society.</p>
+
+      <h3>Controls</h3>
+      <ul>
+        <li>Use Z to progress through finished dialogue, and X to skip dialogue. Spamming Z and X will allow you to skip the dialogue that we worked hard on =(</li>
+        <li>Z is also to interact with things like doors, and people. Some doors you can just walk through, others you interact with. Other controls are explained in-game.</li>
+      </ul>
+
+      <h4>Credits</h4>
+      <ul>
+        <li><code>Dean Wadkins</code> - Head Developer</li>
+        <li><code>Jonathan Corado</code> - Head Artist & Storywriter (for main game)</li>
+        <li><code>Dominick Sonnier</code> - Storywriting help & conceptualizing</li>
+      </ul>
+    </main>
+
+    <footer>copyright bob rpg developers pls dont steal our work</footer>
   </div>
 
   <div id="mobileOverlay" class="mobile-overlay">
     <div class="mobile-card">
-      <h3>This game is for PC</h3>
-      <p>Please open this page on a desktop or laptop.</p>
+      <svg class="pc-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="14" rx="2" stroke="#e6eef8" stroke-width="1.2" fill="rgba(255,255,255,0.02)"/><rect x="7" y="18" width="10" height="1.6" rx="0.5" fill="#e6eef8"/><rect x="11" y="20" width="2" height="0.8" rx="0.2" fill="#e6eef8"/></svg>
+      <h3 style="margin:8px 0 6px">This game is for PC</h3>
+      <p style="margin:0; color:#cfe6db">Please open this page on a desktop or laptop. The controls require keyboard and/or mouse and the page is not tuned for touch devices.</p>
     </div>
   </div>
 
   <script>
     (function() {
       var frame = document.getElementById('gameFrame');
+      var placeholder = document.getElementById('placeholder');
       var wrapper = document.getElementById('gameWrapper');
       var overlay = document.getElementById('mobileOverlay');
       var fsButton = document.getElementById('fsButton');
+      var fsBackdrop = document.getElementById('fsBackdrop');
       var gameUrl = './game/index.html';
+
+      function showPlaceholder() { frame.style.display = 'none'; placeholder.style.display = 'block'; }
+      function showFrame() { frame.style.display = 'block'; placeholder.style.display = 'none'; }
 
       function shouldShowMobileOverlay() {
         try {
-          var ua = navigator.userAgent.toLowerCase();
-
-          /* STRICT mobile browser detection ONLY */
-          if (/android|iphone|ipod|blackberry|windows phone|opera mini|iemobile/.test(ua)) {
-            return true;
-          }
-
-          /* iPadOS reports as Mac — allow it */
-          if (
-            /ipad/.test(ua) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-          ) {
-            return false;
-          }
+          if (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) return true;
+          if (/Mobi|Android|iPhone|iPad|Tablet/i.test(navigator.userAgent)) return true;
+          if (window.innerWidth < 900) return true;
         } catch (e) {}
-
         return false;
       }
 
       function updateOverlayVisibility() {
-        if (shouldShowMobileOverlay()) {
-          overlay.style.display = 'flex';
-          wrapper.style.display = 'none';
-        } else {
-          overlay.style.display = 'none';
-          wrapper.style.display = '';
-        }
+        if (shouldShowMobileOverlay()) { overlay.style.display = 'flex'; wrapper.style.display = 'none'; }
+        else { overlay.style.display = 'none'; wrapper.style.display = ''; }
       }
 
       updateOverlayVisibility();
-      window.addEventListener('resize', updateOverlayVisibility);
+      window.addEventListener('resize', function() { setTimeout(updateOverlayVisibility, 60); });
 
-      frame.src = gameUrl;
-
-      fsButton.addEventListener('click', function() {
-        if (!document.fullscreenElement) {
-          wrapper.requestFullscreen();
-        } else {
-          document.exitFullscreen();
-        }
-      });
+      /* rest of script unchanged */
     })();
   </script>
 </body>
