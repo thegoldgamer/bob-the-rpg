@@ -14,6 +14,20 @@
       --accent: #3ddc84;
     }
 
+    /* --- overflow / centering hardening (added) --- */
+    /* Always prevent horizontal scrolling and keep vertical scrollbar to avoid layout shifts */
+    html, body {
+      overflow-x: hidden !important;
+      overflow-y: scroll;
+    }
+
+    /* Ensure nothing accidentally grows beyond viewport */
+    * { max-width: 100vw; box-sizing: border-box; }
+
+    /* Keep page container limited to viewport width and centered */
+    .page { width: 100%; max-width: 100vw; padding-left: 12px; padding-right: 12px; box-sizing: border-box; margin: 0 auto; }
+    /* --- end hardening --- */
+
     /* Prevent accidental horizontal overflow while allowing vertical scroll */
     html, body {
       height: 100%;
@@ -237,6 +251,26 @@
           });
 
         }).catch(function() { showPlaceholder(); });
+
+      // Defensive JS mitigation: reapply caps and hide horizontal scroll if something else changes layout
+      (function(){
+        function clampLayout() {
+          try {
+            document.documentElement.style.overflowX = 'hidden';
+            document.body.style.overflowY = 'scroll';
+            var w = document.getElementById('gameWrapper');
+            if (w) {
+              w.style.maxWidth = 'calc(100vw - 24px)';
+              w.style.left = '0';
+              w.style.right = '0';
+            }
+          } catch(e){}
+        }
+        window.addEventListener('load', clampLayout);
+        window.addEventListener('resize', clampLayout);
+        setInterval(clampLayout, 800);
+      })();
+
     })();
   </script>
 </body>
